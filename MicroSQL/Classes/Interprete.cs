@@ -82,6 +82,7 @@ namespace MicroSQL.Classes
 
             //DICCIONARIO PARA LAS COLUMNAS
             Dictionary<string, string> columnas = new Dictionary<string, string>();
+            String llavePrimaria=null;
 
             //RECORRER TODAS LAS COLUMNAS A CREAR
             while(++i< arrayDeInstrucciones.Length && arrayDeInstrucciones[i].Trim() != ")")
@@ -97,12 +98,15 @@ namespace MicroSQL.Classes
                 this.validarIdentificador(nombreColumna);
                 this.validarTipo(tipo);
                 columnas.Add(nombreColumna, tipo);
+                if (tipo.Contains("primary key"))
+                    llavePrimaria = nombreColumna;
+
             }
 
             //VALIDAR PARENTESIS DE CIERRE
             this.validarParentesis(arrayDeInstrucciones[i], true);
 
-            Tabla tabla =new Tabla(nombre, columnas);
+            Tabla tabla =new Tabla(nombre, columnas, llavePrimaria);
             tabla.guardar();
             return tabla;
         }
