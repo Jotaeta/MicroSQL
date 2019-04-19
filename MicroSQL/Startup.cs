@@ -54,10 +54,22 @@ namespace MicroSQL
 
 			app.UseMvc(routes =>
 			{
-				routes.MapRoute(
+                routes.MapRoute(
+                    name: "ejecutar",
+                    template: "console/ejecutar",
+                    defaults: new { controller = "Home", action ="Ejecutar" }
+                );
+
+                routes.MapRoute(
+                    name: "cargarTablas",
+                    template: "recursos/cargar-tablas",
+                    defaults: new { controller = "Home", action = "getTablas" }
+                );
+
+                routes.MapRoute(
 					name: "default",
-					template: "{controller=Home}/{action=Index}/{id?}");
-			});
+					template: "{controller=Home}/{action=Index}/{id?}");                
+            });
 		}
 	}
 }

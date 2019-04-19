@@ -7,3 +7,52 @@
 <partial name="/Views/Editor/Resultados.cshtml" />
 
 <partial name="/Views/Editor/Editor.cshtml" />
+
+@section Scripts {
+
+    <script>
+        $("#btn_ejecutar").click(function () {
+            
+            $.ajax({
+                method: "POST",
+                url: '@Url.Action("ejecutar")',
+                data: {
+                    instruccion: $("#txt_input").val()
+                },
+                success: function (response) {
+                    alert(response)
+                    console.log(response)
+                }
+            });
+            console.log("listo")           
+        })
+
+        $("#btn_create_table").click(function () {
+            let template = `CREATE TABLE
+CARRO
+(
+ID INT PRIMARY KEY,
+MARCA VARCHAR(100),
+LINEA VARCHAR(100),
+SALIDAALMERCADO DATETIME,
+CABALLOSDEFUERZA INT
+)`;
+            $("#txt_input").val(template)       
+        })
+
+    </script>
+
+    <script>
+        $(document).ready(function () {
+
+            $.ajax({
+                method: "get",
+                url: '@Url.RouteUrl("cargarTablas")',
+                success: function (response) {
+                    alert(response)
+                    console.log(response)
+                }
+            })
+        })
+    </script>
+}

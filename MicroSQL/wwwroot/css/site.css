@@ -84,7 +84,7 @@ body {
         padding: 5px;
     }
 
-        #editor .contenedor .txt_input {
+        #editor .contenedor #txt_input {
             width: 100%;
             height: 90%;
             resize: none;
