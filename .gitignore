@@ -1,0 +1,9 @@
+
+MicroSQL/obj/
+
+MicroSQL/bin/
+MicroSQL/arbolesB/
+.vs/
+MicroSQL/MicroSQL.csproj
+MicroSQL/MicroSQL.csproj.user
+MicroSQL/microSQL.ini
