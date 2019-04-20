@@ -49,6 +49,7 @@ body {
     height: 100%;
     width: 100%;
     padding: 5px;
+    overflow-y: auto;
 }
 
 /* RESULTADOS */
@@ -66,6 +67,7 @@ body {
         height: 100%;
         width: 100%;
         padding: 5px;
+        overflow-y: auto;
     }
 
 /* EDITOR */

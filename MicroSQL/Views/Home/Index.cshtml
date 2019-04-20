@@ -9,10 +9,21 @@
 <partial name="/Views/Editor/Editor.cshtml" />
 
 @section Scripts {
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jstree/3.3.7/jstree.min.js"></script>
+
+    <script>
+        //FUNCIONES DE EXITO
+        function create_table(data) {
+            cargarTabla(data);
+        }       
+
+
+    </script>
+
 
     <script>
         $("#btn_ejecutar").click(function () {
-            
+
             $.ajax({
                 method: "POST",
                 url: '@Url.Action("ejecutar")',
@@ -20,13 +31,27 @@
                     instruccion: $("#txt_input").val()
                 },
                 success: function (response) {
-                    alert(response)
-                    console.log(response)
+                    console.log(response)                    
+                    switch (response.tipoComando) {
+                        case "create_table":
+                            create_table(response.data);
+                            break;
+                        case "insert":
+                            setMensajeDeExito(response.data)
+                            break;
+                        case "select":
+                            cargarResultados(response.data[0], response.data[1])
+                            break;
+                        case "error":
+                            setMensajeDeError(response.data)
+                            break;
+                    }
                 }
             });
-            console.log("listo")           
+            console.log("listo")
         })
 
+        //BOTON DE PLANTILLA
         $("#btn_create_table").click(function () {
             let template = `CREATE TABLE
 CARRO
@@ -37,8 +62,42 @@ LINEA VARCHAR(100),
 SALIDAALMERCADO DATETIME,
 CABALLOSDEFUERZA INT
 )`;
-            $("#txt_input").val(template)       
+            $("#txt_input").val(template)
         })
+
+
+        //BOTON DE PLANTILLA
+        $("#btn_insert").click(function () {
+            let template = `INSERT INTO
+CARRO
+(
+ID,
+MARCA,
+LINEA,
+SALIDAALMERCADO,
+CABALLOSDEFUERZA
+)
+VALUES
+(
+1,
+'HYUNDAI',
+'ELANTRA',
+'10/02/2016',
+250
+)`;
+            $("#txt_input").val(template)
+        }) 
+
+        //BOTON DE PLANTILLA
+        $("#btn_select").click(function () {
+            let template = `SELECT
+ID,
+LINEA,
+MARCA
+FROM
+CARRO`;
+            $("#txt_input").val(template)
+        })         
 
     </script>
 
@@ -49,10 +108,17 @@ CABALLOSDEFUERZA INT
                 method: "get",
                 url: '@Url.RouteUrl("cargarTablas")',
                 success: function (response) {
-                    alert(response)
-                    console.log(response)
+                    cargarTablas(response);
                 }
             })
+
+            $('#arbol_tablas').jstree({
+                "core": {
+                    // so that create works
+                    "check_callback": true,
+                }
+            });
+
         })
     </script>
 }

@@ -1,18 +1,32 @@
 ﻿<div id="inspector">
     <div class="contenedor">
-        <ul>
-            <li>
-                <div class="tabla">
-                    <span class="nombre">Tabla 1</span>
-                    <ul class="columnas">
-                        <li>ID</li>
-                        <li>Nombre</li>
-                        <li>Descripcion</li>
-                    </ul>
-                </div>
-               
-            </li>
-        </ul>
+        <div id="arbol_tablas">            
+        </div>        
     </div>
 
 </div>
+
+<script>
+    function cargarTablas(tablasArray) {
+        console.log(tablasArray);
+        tablasArray.forEach(function (tabla) {
+            cargarTabla(tabla);
+        });
+   }
+
+    function cargarTabla(tabla) {
+         
+            $('#arbol_tablas').jstree().create_node('#',
+                { "id": tabla.nombre, "text": tabla.nombre, "icon": "/images/table_icon.png" }, "last",
+                function () {
+                    for (var columna in tabla.columnas) {
+                        $('#arbol_tablas')
+                            .jstree()
+                            .create_node(tabla.nombre, {
+                                "text": columna + " " + tabla.columnas[columna] ,
+                                "icon": "/images/field_icon.png"
+                            }, "last");        
+                    }
+                }); 
+    }
+</script>

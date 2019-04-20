@@ -1,16 +1,58 @@
 ﻿<div id="resultados">
     <div class="contenedor">
-        <table>
-            <tr>
-                <th>ID</th>
-                <th>Nombre</th>
-                <th>Desc</th>
-            </tr>
-            <tr>
-                <td>1</td>
-                <td>Jonathan</td>
-                <td>Argueta</td>
-            </tr>
+        <div id="mensaje_exito" class="text-success"></div>
+        <div id="mensaje_error" class="text-danger"></div>
+        <table id="grid_resultados" class="table">       
+            
         </table>
     </div>
 </div>
+
+<script>
+    function setMensajeDeExito(mensaje) {
+        let selector = "#mensaje_exito";
+        $(selector).show();
+        $(selector).html(mensaje);
+
+        $("#mensaje_error").hide();
+    }
+
+    function setMensajeDeError(mensaje) {
+        let selector = "#mensaje_error";
+        $(selector).show();
+        $(selector).html(mensaje);
+
+        $("#mensaje_exito").hide();
+    }
+    
+
+    function cargarResultados(columnas, data) {
+        setMensajeDeExito("Se encontraron " + data.length + " registros ");
+        console.log(columnas);
+        console.log(data);        
+        $("#grid_resultados").empty()
+        cargarEncabezado(columnas);
+
+        data.forEach(function (fila) {
+            cargarFila(columnas, fila);
+        });
+    }
+
+    function cargarEncabezado(columnas) {
+        let row = "<tr>"
+        columnas.forEach(function (columna) {
+            row += "<th>" + columna + "</th>";
+        });
+        row += "</tr>";
+        $("#grid_resultados").append(row);
+    }
+
+    function cargarFila(columnas, fila) {
+        let row = "<tr>"
+        columnas.forEach(function (columna) {
+            row += "<td>" + fila[columna] + "</td>";
+        });
+        row += "</tr>";
+        $("#grid_resultados").append(row);
+    }
+</script>

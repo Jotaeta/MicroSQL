@@ -8,6 +8,7 @@ using MicroSQL.Models;
 using System.IO;
 using System.Text;
 using MicroSQL.Classes;
+using MicroSQL.Excepciones;
 
 namespace MicroSQL.Controllers
 {
@@ -46,8 +47,23 @@ namespace MicroSQL.Controllers
         [HttpPost]
         public ActionResult Ejecutar(string instruccion)
         {
-            Interprete interprete = new Interprete();            
-            return Json(interprete.ejecutar(instruccion));
+            Resultado r;
+            try
+            {
+                Interprete interprete = new Interprete();
+                 r = interprete.ejecutar(instruccion);
+            }catch(DuplicateWaitObjectException e)
+            {
+                r = new Resultado("error", e.Message);
+            }catch(ErrorDeSintaxis e)
+            {
+                r = new Resultado("error", e.Message);
+            }catch(ErrorDeSemantica e)
+            {
+                r = new Resultado("error", e.Message);
+            }
+
+            return Json(r);
         }
 
         public ActionResult getTablas()

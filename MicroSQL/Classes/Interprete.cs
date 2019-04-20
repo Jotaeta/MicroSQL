@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using System.Text;
 using System.Text.RegularExpressions;
 using MicroSQL.Models;
+using MicroSQL.Excepciones;
 
 namespace MicroSQL.Classes
 {
@@ -53,7 +54,7 @@ namespace MicroSQL.Classes
         }
 
         //METODO PRINCIPAL
-        public object ejecutar(string texto)
+        public Resultado ejecutar(string texto)
         {
             //REMOVER LINEAS EN BLANCO            
             string[] arrayDeInstrucciones = Regex.Split( texto, @"\s*[\r\n]+\s*");
@@ -66,13 +67,17 @@ namespace MicroSQL.Classes
             {
                 case "CREATE TABLE":
                    return this.createTable(arrayDeInstrucciones);
+                case "INSERT INTO":
+                    return this.insert(arrayDeInstrucciones);
+                case "SELECT":
+                    return this.select(arrayDeInstrucciones);
                 default:
-                    return instruccion;
+                    return new Resultado(instruccion, null);
             }            
         }
 
         //METODO PARCIAL
-        private Tabla createTable(string[] arrayDeInstrucciones)
+        private Resultado createTable(string[] arrayDeInstrucciones)
         {
             int i = 0;
             //NOMBRE DE LA TABLA
@@ -89,8 +94,7 @@ namespace MicroSQL.Classes
             {
                 string instruccion = arrayDeInstrucciones[i];
                 //REMOVER COMA AL FINAL 
-                if (instruccion.EndsWith(","))
-                    instruccion= instruccion.Substring(0, instruccion.Length - 1);               
+                instruccion = this.removerComaAlFinal(instruccion);
 
                 //DATOS DE LA COLUMNA
                 string nombreColumna = instruccion.Substring(0, instruccion.IndexOf(' ') + 1).Trim().ToLower();
@@ -108,7 +112,113 @@ namespace MicroSQL.Classes
 
             Tabla tabla =new Tabla(nombre, columnas, llavePrimaria);
             tabla.guardar();
-            return tabla;
+            return new Resultado("create_table", tabla);
+        }
+
+        //INSERT 
+        public Resultado insert(string[] arrayDeInstrucciones)
+        {
+            int i = 0;
+            Dictionary<string, string> data = new Dictionary<string, string>();
+            String instruccion;
+
+            //NOMBRE DE LA TABLA
+            string nombreTabla = arrayDeInstrucciones[++i];
+            this.validarIdentificador(nombreTabla);                        
+
+            //OBTENER COLUMNAS DESDE ( HASTA )
+            List<string> columnas = this.extraerColumnas(arrayDeInstrucciones, ref i, true);
+
+            //----------- PARTE 2 ------------------
+            //VALIDAR PALABRA VALUES
+            this.palabrasReservadas.TryGetValue(arrayDeInstrucciones[++i], out instruccion);
+            this.validarPalabraReservada("VALUES", instruccion);
+            this.validarParentesis(arrayDeInstrucciones[++i]);
+
+            int indexColumna = 0;
+            //RECORRER VALORES A INSERTAR
+            while (++i < arrayDeInstrucciones.Length && arrayDeInstrucciones[i].Trim() != ")")
+            {                
+                //REMOVER COMA AL FINAL                
+                instruccion = this.removerComaAlFinal(arrayDeInstrucciones[i]);
+
+                //VALOR
+                string valor = instruccion.Trim().ToLower();
+                this.validarValor(valor);
+                data.Add(columnas.ElementAt(indexColumna++), valor);
+            }
+
+            //VALIDAR PARENTESIS DE CIERRE
+            this.validarParentesis(arrayDeInstrucciones[i], true);
+
+            Tabla tabla = Tabla.cargarTabla(Tabla.rutaTabla(nombreTabla));
+            string mensaje = tabla.insertar(data);
+            tabla.guardar();
+            return new Resultado("insert", mensaje);
+        }
+
+        private Resultado select(string[] arrayDeInstrucciones)
+        {
+            int i = 0;
+            String instruccion;
+
+            //OBTENER COLUMNAS DESDE HASTA 
+            List<string> columnas = arrayDeInstrucciones[i].Trim() == "*" ? null : this.extraerColumnas(arrayDeInstrucciones, ref i);
+
+            //VALIDAR PALABRA FROM
+            this.palabrasReservadas.TryGetValue(arrayDeInstrucciones[i], out instruccion);
+            this.validarPalabraReservada("FROM", instruccion);
+
+            //NOMBRE DE LA TABLA
+            string nombreTabla = arrayDeInstrucciones[++i];
+            this.validarIdentificador(nombreTabla);
+
+            string columnaFiltro = null, valorFiltro = null;
+
+            if (arrayDeInstrucciones.Count() - 1 > i)
+            {
+                //VALIDAR PALABRA FROM
+                this.palabrasReservadas.TryGetValue(arrayDeInstrucciones[++i], out instruccion);
+                this.validarPalabraReservada("WHERE", instruccion);
+                instruccion = arrayDeInstrucciones[++i];
+                columnaFiltro = instruccion.Split("=")[0].Trim().ToLower();
+                valorFiltro = instruccion.Split("=")[1].Trim().ToLower();
+            }
+
+            Tabla tabla = Tabla.cargarTabla(Tabla.rutaTabla(nombreTabla));
+            List<object> dataset = tabla.select(ref columnas, columnaFiltro, valorFiltro);
+
+            return new Resultado("select", new object[2] { columnas, dataset });
+        }
+
+        private List<string> extraerColumnas(string[] arrayDeInstrucciones, ref int i, bool entreParentesis= false)
+        {
+            if(entreParentesis)
+                this.validarParentesis(arrayDeInstrucciones[++i]);            
+
+            //LISTA TEMPORAL PARA LAS COLUMNAS
+            List<string> columnas = new List<string>();
+            String instruccion;
+
+            //RECORRER TODAS LAS COLUMNAS A INSERTAR VALORES
+            while (++i < arrayDeInstrucciones.Length 
+                && arrayDeInstrucciones[i].Trim() != ")"
+                && !this.palabrasReservadas.ContainsKey(arrayDeInstrucciones[i].Trim())
+                )
+            {
+                instruccion = arrayDeInstrucciones[i];
+                //REMOVER COMA AL FINAL                
+                instruccion = this.removerComaAlFinal(instruccion);
+
+                //DATOS DE LA COLUMNA
+                string nombreColumna = instruccion.Trim().ToLower();
+                this.validarIdentificador(nombreColumna);
+                columnas.Add(nombreColumna);
+            }
+            //VALIDAR PARENTESIS DE CIERRE
+            if(entreParentesis)
+                this.validarParentesis(arrayDeInstrucciones[i], true);
+            return columnas;
         }
 
         private bool validarParentesis(string linea, bool esCierre=false)
@@ -119,32 +229,60 @@ namespace MicroSQL.Classes
             }
             else
             {
-                throw new Exception("custom error");
+                throw new ErrorDeSintaxis("Se esperaba cierre de parentesis");
             }            
         }
 
-        private bool validarIdentificador(string linea)
+        private bool validarValor(string linea)
         {
-            if (Regex.Match(linea, @"[_a-zA-Z][_a-zA-Z0-9]*").Success)
-            {
-               return true;
-            }
-            else
-            {
-                throw new Exception("custom error");
-            }
-        }
-
-        private bool validarTipo(string linea)
-        {
-            if (Regex.Match(linea, @"(varchar\([0-9]+\)|int|datetime)[primary key]?").Success)
+            if (Regex.Match(linea, @"^(('[^']*')|(^\d+))$").Success)
             {
                 return true;
             }
             else
             {
-                throw new Exception("custom error: " + linea);
+                throw new ErrorDeSintaxis("El valor ["+ linea +"] no cumple con los formatos permitidos");
             }
+        }
+
+        private bool validarIdentificador(string linea)
+        {
+            if (Regex.Match(linea, @"^[_a-zA-Z][_a-zA-Z0-9]*$").Success)
+            {
+               return true;
+            }
+            else
+            {
+                throw new ErrorDeSintaxis("El identificador no cumple con las reglas definidas "+ linea);
+            }
+        }
+
+        private bool validarTipo(string linea)
+        {
+            if (Regex.Match(linea, @"^(varchar\([0-9]+\)|int|datetime)[primary key]?$").Success)
+            {
+                return true;
+            }
+            else
+            {
+                throw new ErrorDeSintaxis("tipo invalido: " + linea);
+            }
+        }
+
+        private bool validarPalabraReservada(string palabraCorrecta, string palabraIngresada)
+        {
+            if (palabraCorrecta != palabraIngresada)
+            {
+                throw new ErrorDeSintaxis("Se esperaba" + palabraCorrecta);
+            }
+            return true;
+        }
+
+        private string removerComaAlFinal(string linea)
+        {
+            if (linea.EndsWith(","))
+                linea = linea.Substring(0, linea.Length - 1);
+            return linea;
         }
     }
 }
