@@ -39,7 +39,7 @@ namespace MicroSQL.Classes
         {
             string defaults = @"SELECT,SELECT
                                 FROM,FROM
-                                DELETE,DELETE
+                                DELETE FROM,DELETE FROM
                                 WHERE,WHERE
                                 CREATE TABLE,CREATE TABLE
                                 DROP TABLE,DROP TABLE
@@ -71,6 +71,10 @@ namespace MicroSQL.Classes
                     return this.insert(arrayDeInstrucciones);
                 case "SELECT":
                     return this.select(arrayDeInstrucciones);
+                case "DELETE FROM":
+                    return this.delete(arrayDeInstrucciones);
+                case "DROP TABLE":
+                    return this.dropTable(arrayDeInstrucciones);
                 default:
                     return new Resultado(instruccion, null);
             }            
@@ -81,18 +85,18 @@ namespace MicroSQL.Classes
         {
             int i = 0;
             //NOMBRE DE LA TABLA
-            string nombre = arrayDeInstrucciones[++i];
+            string nombre = this.instruccionByIndex(arrayDeInstrucciones, ++i);
             this.validarIdentificador(nombre);
-            this.validarParentesis(arrayDeInstrucciones[++i]);
+            this.validarParentesis(this.instruccionByIndex(arrayDeInstrucciones, ++i));
 
             //DICCIONARIO PARA LAS COLUMNAS
             Dictionary<string, string> columnas = new Dictionary<string, string>();
             String llavePrimaria=null;
 
             //RECORRER TODAS LAS COLUMNAS A CREAR
-            while(++i< arrayDeInstrucciones.Length && arrayDeInstrucciones[i].Trim() != ")")
+            while(++i< arrayDeInstrucciones.Length && this.instruccionByIndex(arrayDeInstrucciones, i) != ")")
             {
-                string instruccion = arrayDeInstrucciones[i];
+                string instruccion = this.instruccionByIndex(arrayDeInstrucciones, i);
                 //REMOVER COMA AL FINAL 
                 instruccion = this.removerComaAlFinal(instruccion);
 
@@ -108,7 +112,7 @@ namespace MicroSQL.Classes
             }
 
             //VALIDAR PARENTESIS DE CIERRE
-            this.validarParentesis(arrayDeInstrucciones[i], true);
+            this.validarParentesis(this.instruccionByIndex(arrayDeInstrucciones, i), true);
 
             Tabla tabla =new Tabla(nombre, columnas, llavePrimaria);
             tabla.guardar();
@@ -123,7 +127,7 @@ namespace MicroSQL.Classes
             String instruccion;
 
             //NOMBRE DE LA TABLA
-            string nombreTabla = arrayDeInstrucciones[++i];
+            string nombreTabla = this.instruccionByIndex(arrayDeInstrucciones, ++i);
             this.validarIdentificador(nombreTabla);                        
 
             //OBTENER COLUMNAS DESDE ( HASTA )
@@ -131,16 +135,16 @@ namespace MicroSQL.Classes
 
             //----------- PARTE 2 ------------------
             //VALIDAR PALABRA VALUES
-            this.palabrasReservadas.TryGetValue(arrayDeInstrucciones[++i], out instruccion);
+            this.palabrasReservadas.TryGetValue(this.instruccionByIndex(arrayDeInstrucciones, ++i), out instruccion);
             this.validarPalabraReservada("VALUES", instruccion);
-            this.validarParentesis(arrayDeInstrucciones[++i]);
+            this.validarParentesis(this.instruccionByIndex(arrayDeInstrucciones, ++i));
 
             int indexColumna = 0;
             //RECORRER VALORES A INSERTAR
-            while (++i < arrayDeInstrucciones.Length && arrayDeInstrucciones[i].Trim() != ")")
+            while (++i < arrayDeInstrucciones.Length && this.instruccionByIndex(arrayDeInstrucciones, i) != ")")
             {                
                 //REMOVER COMA AL FINAL                
-                instruccion = this.removerComaAlFinal(arrayDeInstrucciones[i]);
+                instruccion = this.removerComaAlFinal(this.instruccionByIndex(arrayDeInstrucciones, i));
 
                 //VALOR
                 string valor = instruccion.Trim().ToLower();
@@ -149,7 +153,7 @@ namespace MicroSQL.Classes
             }
 
             //VALIDAR PARENTESIS DE CIERRE
-            this.validarParentesis(arrayDeInstrucciones[i], true);
+            this.validarParentesis(this.instruccionByIndex(arrayDeInstrucciones, i), true);
 
             Tabla tabla = Tabla.cargarTabla(Tabla.rutaTabla(nombreTabla));
             string mensaje = tabla.insertar(data);
@@ -160,17 +164,26 @@ namespace MicroSQL.Classes
         private Resultado select(string[] arrayDeInstrucciones)
         {
             int i = 0;
-            String instruccion;
+            String instruccion = this.instruccionByIndex(arrayDeInstrucciones, ++i);
 
-            //OBTENER COLUMNAS DESDE HASTA 
-            List<string> columnas = arrayDeInstrucciones[i].Trim() == "*" ? null : this.extraerColumnas(arrayDeInstrucciones, ref i);
+            //OBTENER COLUMNAS
+            List<string> columnas = null;
+            if (instruccion.Trim() != "*")
+            {
+                i--;
+                columnas= this.extraerColumnas(arrayDeInstrucciones, ref i);
+            }
+            else
+            {
+                i++;
+            }
 
             //VALIDAR PALABRA FROM
-            this.palabrasReservadas.TryGetValue(arrayDeInstrucciones[i], out instruccion);
+            this.palabrasReservadas.TryGetValue(this.instruccionByIndex(arrayDeInstrucciones, i), out instruccion);
             this.validarPalabraReservada("FROM", instruccion);
 
             //NOMBRE DE LA TABLA
-            string nombreTabla = arrayDeInstrucciones[++i];
+            string nombreTabla = this.instruccionByIndex(arrayDeInstrucciones, ++i);
             this.validarIdentificador(nombreTabla);
 
             string columnaFiltro = null, valorFiltro = null;
@@ -178,11 +191,10 @@ namespace MicroSQL.Classes
             if (arrayDeInstrucciones.Count() - 1 > i)
             {
                 //VALIDAR PALABRA FROM
-                this.palabrasReservadas.TryGetValue(arrayDeInstrucciones[++i], out instruccion);
+                this.palabrasReservadas.TryGetValue(this.instruccionByIndex(arrayDeInstrucciones, ++i), out instruccion);
                 this.validarPalabraReservada("WHERE", instruccion);
-                instruccion = arrayDeInstrucciones[++i];
-                columnaFiltro = instruccion.Split("=")[0].Trim().ToLower();
-                valorFiltro = instruccion.Split("=")[1].Trim().ToLower();
+                instruccion = this.instruccionByIndex(arrayDeInstrucciones, ++i);
+                this.interpretarFiltro(instruccion, out columnaFiltro, out valorFiltro);                
             }
 
             Tabla tabla = Tabla.cargarTabla(Tabla.rutaTabla(nombreTabla));
@@ -191,10 +203,57 @@ namespace MicroSQL.Classes
             return new Resultado("select", new object[2] { columnas, dataset });
         }
 
+        private Resultado delete(string[] arrayDeInstrucciones)
+        {
+            int i = 0;
+            String instruccion;
+
+            //NOMBRE DE LA TABLA
+            string nombreTabla = this.instruccionByIndex(arrayDeInstrucciones, ++i);
+            this.validarIdentificador(nombreTabla);
+
+            string columnaFiltro = null, valorFiltro = null;
+
+            if (arrayDeInstrucciones.Count() - 1 > i)
+            {
+                //VALIDAR PALABRA WHERE
+                this.palabrasReservadas.TryGetValue(this.instruccionByIndex(arrayDeInstrucciones, ++i), out instruccion);
+                this.validarPalabraReservada("WHERE", instruccion);
+                instruccion = this.instruccionByIndex(arrayDeInstrucciones, ++i);
+                this.interpretarFiltro(instruccion, out columnaFiltro, out valorFiltro);
+            }
+
+            Tabla tabla = Tabla.cargarTabla(Tabla.rutaTabla(nombreTabla));
+            int registrosEliminados= tabla.delete(columnaFiltro, valorFiltro);
+            tabla.guardar();
+            return new Resultado("delete", "Se eliminaron " +registrosEliminados+ " de la tabla " + nombreTabla);
+        }
+
+        private Resultado dropTable(string[] arrayDeInstrucciones)
+        {
+            int i = 0;            
+
+            //NOMBRE DE LA TABLA
+            string nombreTabla = this.instruccionByIndex(arrayDeInstrucciones, ++i);
+            this.validarIdentificador(nombreTabla);
+
+            string mensaje = "No se encontro la tabla a eliminar";
+            if (Tabla.borrarTabla(Tabla.rutaTabla(nombreTabla)))
+            {
+                mensaje = "Tabla "+ nombreTabla+ " eliminada con exito";
+            }
+            else
+            {
+                throw new ErrorDeSemantica(mensaje);
+            }
+
+            return new Resultado("drop_table", new object[2] { mensaje, nombreTabla});
+        }
+
         private List<string> extraerColumnas(string[] arrayDeInstrucciones, ref int i, bool entreParentesis= false)
         {
             if(entreParentesis)
-                this.validarParentesis(arrayDeInstrucciones[++i]);            
+                this.validarParentesis(this.instruccionByIndex(arrayDeInstrucciones, ++i));            
 
             //LISTA TEMPORAL PARA LAS COLUMNAS
             List<string> columnas = new List<string>();
@@ -202,23 +261,45 @@ namespace MicroSQL.Classes
 
             //RECORRER TODAS LAS COLUMNAS A INSERTAR VALORES
             while (++i < arrayDeInstrucciones.Length 
-                && arrayDeInstrucciones[i].Trim() != ")"
-                && !this.palabrasReservadas.ContainsKey(arrayDeInstrucciones[i].Trim())
+                && this.instruccionByIndex(arrayDeInstrucciones, i) != ")"
+                && !this.palabrasReservadas.ContainsKey(this.instruccionByIndex(arrayDeInstrucciones, i))
                 )
             {
-                instruccion = arrayDeInstrucciones[i];
+                instruccion = this.instruccionByIndex(arrayDeInstrucciones, i);
                 //REMOVER COMA AL FINAL                
                 instruccion = this.removerComaAlFinal(instruccion);
 
                 //DATOS DE LA COLUMNA
-                string nombreColumna = instruccion.Trim().ToLower();
+                string nombreColumna = instruccion.ToLower();
                 this.validarIdentificador(nombreColumna);
                 columnas.Add(nombreColumna);
             }
             //VALIDAR PARENTESIS DE CIERRE
             if(entreParentesis)
-                this.validarParentesis(arrayDeInstrucciones[i], true);
+                this.validarParentesis(this.instruccionByIndex(arrayDeInstrucciones, i), true);
+
+            if (columnas.Count() < 1)
+            {
+                throw new ErrorDeSintaxis("Se esperaba al menos una columna");
+            }
             return columnas;
+        }
+
+        private void interpretarFiltro(string linea, out string columnaFiltro, out string valorFiltro )
+        {
+            linea = linea.ToLower();
+            this.validarFiltro(linea);
+
+            if (linea.Contains("like"))
+            {
+                columnaFiltro = linea.Split("like")[0].Trim();
+                valorFiltro = linea.Split("like")[1].Trim().Replace("%","(.*)");
+            }
+            else
+            {
+                columnaFiltro = linea.Split("=")[0].Trim();
+                valorFiltro = linea.Split("=")[1].Trim();
+            }
         }
 
         private bool validarParentesis(string linea, bool esCierre=false)
@@ -257,6 +338,18 @@ namespace MicroSQL.Classes
             }
         }
 
+        private bool validarFiltro(string linea)
+        {
+            if (Regex.Match(linea, @"^[_a-zA-Z][_a-zA-Z0-9]*\s*(=|like)\s*(('[^']*')|(\d+))$").Success)
+            {
+                return true;
+            }
+            else
+            {
+                throw new ErrorDeSintaxis("Filtro where invalido: " + linea);
+            }
+        }
+
         private bool validarTipo(string linea)
         {
             if (Regex.Match(linea, @"^(varchar\([0-9]+\)|int|datetime)[primary key]?$").Success)
@@ -273,7 +366,7 @@ namespace MicroSQL.Classes
         {
             if (palabraCorrecta != palabraIngresada)
             {
-                throw new ErrorDeSintaxis("Se esperaba" + palabraCorrecta);
+                throw new ErrorDeSintaxis("Se esperaba: " + palabraCorrecta + " en lugar de " + palabraIngresada);
             }
             return true;
         }
@@ -283,6 +376,18 @@ namespace MicroSQL.Classes
             if (linea.EndsWith(","))
                 linea = linea.Substring(0, linea.Length - 1);
             return linea;
+        }
+
+        private string instruccionByIndex(string[] arrayDeInstrucciones, int i)
+        {
+            if(arrayDeInstrucciones.Count() > i)
+            {
+                return arrayDeInstrucciones[i].Trim();
+            }
+            else
+            {
+                throw new ErrorDeSintaxis("No se esperaba fin del archivo");
+            }
         }
     }
 }

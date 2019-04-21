@@ -23,7 +23,8 @@
 
     <script>
         $("#btn_ejecutar").click(function () {
-
+            setMensajeDeExito("");
+            limpiarResultados();
             $.ajax({
                 method: "POST",
                 url: '@Url.Action("ejecutar")',
@@ -42,6 +43,13 @@
                         case "select":
                             cargarResultados(response.data[0], response.data[1])
                             break;
+                        case "delete":
+                            setMensajeDeExito(response.data)
+                            break;
+                        case "drop_table":
+                            setMensajeDeExito(response.data[0])
+                            $('#arbol_tablas').jstree().delete_node(response.data[1]);
+                            break;
                         case "error":
                             setMensajeDeError(response.data)
                             break;
@@ -51,7 +59,8 @@
             console.log("listo")
         })
 
-        //BOTON DE PLANTILLA
+
+        //BOTON DE PLANTILLA CREATE TABLE
         $("#btn_create_table").click(function () {
             let template = `CREATE TABLE
 CARRO
@@ -99,26 +108,44 @@ CARRO`;
             $("#txt_input").val(template)
         })         
 
+         //BOTON DE PLANTILLA DELETE
+        $("#btn_delete").click(function () {
+            let template = `DELETE FROM
+CARRO
+WHERE
+ID = 1`;
+            $("#txt_input").val(template)
+        })      
+
+        //BOTON DE PLANTILLA DROP
+        $("#btn_drop").click(function () {
+            let template = `DROP TABLE
+CARRO`;
+            $("#txt_input").val(template)
+        })      
     </script>
 
     <script>
-        $(document).ready(function () {
-
+        function ajaxCargarTablas() {
             $.ajax({
                 method: "get",
                 url: '@Url.RouteUrl("cargarTablas")',
-                success: function (response) {
+                success: function (response) {                    
                     cargarTablas(response);
                 }
-            })
+            })                 
+        }
 
+        $(document).ready(function () {        
             $('#arbol_tablas').jstree({
                 "core": {
                     // so that create works
                     "check_callback": true,
+                    deletable : "all",
                 }
             });
 
+            ajaxCargarTablas();            
         })
     </script>
 }

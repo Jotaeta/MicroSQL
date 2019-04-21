@@ -56,6 +56,18 @@ namespace MicroSQL.Models
             return tabla;
         }
 
+        public static bool borrarTabla(string rutaArchivo)
+        {
+            if (File.Exists(rutaArchivo)) {
+                File.Delete(rutaArchivo);
+                return true;
+            }else
+            {
+                return false;
+            }
+            
+        }
+
         public string insertar(Dictionary<string, string> data)
         {
             this.validarDatosAInsertar(data);
@@ -120,30 +132,11 @@ namespace MicroSQL.Models
             }
         }
 
-        internal List<object> select(ref List<string> columnas, string columnaFiltro, string valorFiltro)
+        public List<object> select(ref List<string> columnas, string columnaFiltro, string valorFiltro)
         {
             List<object> dataset = new List<object>();
-            List<NodoArbolBMas> listadoDeNodos = new List<NodoArbolBMas>();
+            List<NodoArbolBMas> listadoDeNodos = this.obtenerListadoNodos(columnas, columnaFiltro, valorFiltro);
             columnas = columnas == null ? this.columnas.Keys.ToList<string>() : columnas;
-
-            //SELECT SIN WHERE
-            if (columnaFiltro!=null || valorFiltro != null)
-            {
-                //VALIDAR COLUMNA Y VALOR DE BUSQUEDA
-                this.validarColumnaValor(columnaFiltro, valorFiltro);
-            }
-            
-            //BUSCANDO POR LLAVE PRIMARIA
-            if (columnaFiltro== this.llavePrimaria)
-            {
-                NodoArbolBMas nodo = this.buscarPorLlave(int.Parse(valorFiltro));
-                if(nodo!= null)
-                    listadoDeNodos.Add(nodo);
-            }
-            else
-            {
-                listadoDeNodos = this.buscarEnTodo(columnaFiltro, valorFiltro);
-            }
 
             //MAPEAR A REUSLTADO FINAL
             for (int i=0; i< listadoDeNodos.Count; i++)
@@ -157,6 +150,48 @@ namespace MicroSQL.Models
                 dataset.Add(row);
             }
             return dataset;            
+        }
+
+        private List<NodoArbolBMas> obtenerListadoNodos(List<string> columnas, string columnaFiltro, string valorFiltro)
+        {
+            List<NodoArbolBMas> listadoDeNodos = new List<NodoArbolBMas>();
+            columnas = columnas == null ? this.columnas.Keys.ToList<string>() : columnas;
+
+            //SELECT CON WHERE
+            if (columnaFiltro != null || valorFiltro != null)
+            {
+                //VALIDAR COLUMNA Y VALOR DE BUSQUEDA
+                this.validarColumnaValor(columnaFiltro, valorFiltro);
+            }
+
+            //BUSCANDO POR LLAVE PRIMARIA
+            if (columnaFiltro == this.llavePrimaria)
+            {
+                NodoArbolBMas nodo = this.buscarPorLlave(int.Parse(valorFiltro));
+                if (nodo != null)
+                    listadoDeNodos.Add(nodo);
+            }
+            else
+            {
+                listadoDeNodos = this.buscarEnTodo(columnaFiltro, valorFiltro);
+            }
+            return listadoDeNodos;
+        }
+
+        public int delete(string columnaFiltro, string valorFiltro)
+        {
+            List<object> dataset = new List<object>();
+            List<string> columnas = null;
+            List<NodoArbolBMas> listadoDeNodos = this.obtenerListadoNodos(columnas, columnaFiltro, valorFiltro);
+
+            int resultado = 0;
+            //MAPEAR A REUSLTADO FINAL
+            for (int i = 0; i < listadoDeNodos.Count; i++)
+            {
+                NodoArbolBMas nodo = listadoDeNodos.ElementAt(i);
+                if(this.eliminar(nodo)) resultado++;
+            }
+            return resultado;
         }
     }
 }

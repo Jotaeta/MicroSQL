@@ -10,6 +10,8 @@
 
 <script>
     function setMensajeDeExito(mensaje) {
+        limpiarResultados();
+
         let selector = "#mensaje_exito";
         $(selector).show();
         $(selector).html(mensaje);
@@ -18,19 +20,25 @@
     }
 
     function setMensajeDeError(mensaje) {
+        limpiarResultados();
+
         let selector = "#mensaje_error";
         $(selector).show();
         $(selector).html(mensaje);
 
         $("#mensaje_exito").hide();
     }
+
+    function limpiarResultados() {
+        $("#grid_resultados").empty();
+    }
     
 
     function cargarResultados(columnas, data) {
         setMensajeDeExito("Se encontraron " + data.length + " registros ");
         console.log(columnas);
-        console.log(data);        
-        $("#grid_resultados").empty()
+        console.log(data);
+        limpiarResultados();
         cargarEncabezado(columnas);
 
         data.forEach(function (fila) {
