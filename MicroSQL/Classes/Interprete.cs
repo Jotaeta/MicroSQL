@@ -45,6 +45,8 @@ namespace MicroSQL.Classes
                                 DROP TABLE,DROP TABLE
                                 INSERT INTO,INSERT INTO
                                 VALUES,VALUES
+                                UPDATE,UPDATE
+                                SET,SET
                                 GO,GO";
 
             System.IO.StreamWriter streamWriter = new System.IO.StreamWriter(rutaArchivoDeConfiguracion);
@@ -75,8 +77,10 @@ namespace MicroSQL.Classes
                     return this.delete(arrayDeInstrucciones);
                 case "DROP TABLE":
                     return this.dropTable(arrayDeInstrucciones);
+                case "UPDATE":
+                    return this.update(arrayDeInstrucciones);
                 default:
-                    return new Resultado(instruccion, null);
+                    throw new ErrorDeSemantica("NO SE RECONOCE EL COMANDO. Revise el archivo de configuracion");
             }            
         }
 
@@ -250,6 +254,39 @@ namespace MicroSQL.Classes
             return new Resultado("drop_table", new object[2] { mensaje, nombreTabla});
         }
 
+        private Resultado update(string[] arrayDeInstrucciones)
+        {
+            int i = 0;
+            String instruccion;
+            string columnaActualizar=null, valorActualizar=null, columnaFiltro = null, valorFiltro = null;
+
+            //NOMBRE DE LA TABLA
+            string nombreTabla = this.instruccionByIndex(arrayDeInstrucciones, ++i);
+            this.validarIdentificador(nombreTabla);
+
+            //VALIDAR PALABRA SET
+            this.palabrasReservadas.TryGetValue(this.instruccionByIndex(arrayDeInstrucciones, ++i), out instruccion);
+            this.validarPalabraReservada("SET", instruccion);
+
+            //OBTENER VALOR Y COLUMNA A ACTUALIZAR
+            instruccion = this.instruccionByIndex(arrayDeInstrucciones, ++i);
+            this.validarAsignacion(instruccion);
+            columnaActualizar= instruccion.Split("=")[0].Trim();
+            valorActualizar = instruccion.Split("=")[1].Trim();
+
+            //VALIDAR PALABRA WHERE
+            this.palabrasReservadas.TryGetValue(this.instruccionByIndex(arrayDeInstrucciones, ++i), out instruccion);
+            this.validarPalabraReservada("WHERE", instruccion);
+            instruccion = this.instruccionByIndex(arrayDeInstrucciones, ++i);
+            this.interpretarFiltro(instruccion, out columnaFiltro, out valorFiltro);
+
+            //MODIFICAR FILA EN LA TABLA
+            Tabla tabla = Tabla.cargarTabla(Tabla.rutaTabla(nombreTabla));
+            int resultado = tabla.update(columnaActualizar, valorActualizar, columnaFiltro, valorFiltro);
+            tabla.guardar();
+            return new Resultado("update", "Se actualizaron "+resultado + " registros");
+        }
+
         private List<string> extraerColumnas(string[] arrayDeInstrucciones, ref int i, bool entreParentesis= false)
         {
             if(entreParentesis)
@@ -347,6 +384,18 @@ namespace MicroSQL.Classes
             else
             {
                 throw new ErrorDeSintaxis("Filtro where invalido: " + linea);
+            }
+        }
+
+        private bool validarAsignacion(string linea)
+        {
+            if (Regex.Match(linea, @"^[_a-zA-Z][_a-zA-Z0-9]*\s*(=)\s*(('[^']*')|(\d+))$").Success)
+            {
+                return true;
+            }
+            else
+            {
+                throw new ErrorDeSintaxis("Asignacion invalida: " + linea);
             }
         }
 

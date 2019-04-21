@@ -46,6 +46,9 @@
                         case "delete":
                             setMensajeDeExito(response.data)
                             break;
+                        case "update":
+                            setMensajeDeExito(response.data)
+                            break;
                         case "drop_table":
                             setMensajeDeExito(response.data[0])
                             $('#arbol_tablas').jstree().delete_node(response.data[1]);
@@ -75,7 +78,7 @@ CABALLOSDEFUERZA INT
         })
 
 
-        //BOTON DE PLANTILLA
+        //BOTON DE PLANTILLA INSERT
         $("#btn_insert").click(function () {
             let template = `INSERT INTO
 CARRO
@@ -122,7 +125,18 @@ ID = 1`;
             let template = `DROP TABLE
 CARRO`;
             $("#txt_input").val(template)
-        })      
+        })   
+
+        //BOTON DE PLANTILLA UPDATE
+        $("#btn_update").click(function () {
+            let template = `UPDATE
+CARRO
+SET
+MARCA = 'HONDA'
+WHERE
+ID = 1`;
+            $("#txt_input").val(template)
+        })   
     </script>
 
     <script>

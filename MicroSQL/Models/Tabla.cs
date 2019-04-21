@@ -185,11 +185,29 @@ namespace MicroSQL.Models
             List<NodoArbolBMas> listadoDeNodos = this.obtenerListadoNodos(columnas, columnaFiltro, valorFiltro);
 
             int resultado = 0;
-            //MAPEAR A REUSLTADO FINAL
+            //ELIMINAR NODOS ENCONTRADOS
             for (int i = 0; i < listadoDeNodos.Count; i++)
             {
                 NodoArbolBMas nodo = listadoDeNodos.ElementAt(i);
                 if(this.eliminar(nodo)) resultado++;
+            }
+            return resultado;
+        }
+
+        public int update(string columnaActualizar, string valorActualizar, string columnaFiltro, string valorFiltro)
+        {
+            this.validarColumnaValor(columnaActualizar, valorActualizar);
+            List<object> dataset = new List<object>();
+            List<string> columnas = null;
+            List<NodoArbolBMas> listadoDeNodos = this.obtenerListadoNodos(columnas, columnaFiltro, valorFiltro);
+
+            int resultado = 0;
+            //ACTUALIZAR NODOS ENCONTRADOS
+            for (int i = 0; i < listadoDeNodos.Count; i++)
+            {
+                NodoArbolBMas nodo = listadoDeNodos.ElementAt(i);
+                nodo.data[columnaActualizar] = valorActualizar;
+                resultado++;
             }
             return resultado;
         }
